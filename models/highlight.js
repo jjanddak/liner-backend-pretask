@@ -11,6 +11,8 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      highlight.belongsTo(models.user, { foreignKey: "user_id", targetKey: "id"});
+      highlight.belongsTo(models.page, { foreignKey: "page_id", targetKey: "id"});
     }
   };
   highlight.init({

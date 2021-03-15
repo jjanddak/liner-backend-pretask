@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
+      page.hasMany(models.highlight, { foreignKey: "page_id", targetKey: "id"});
     }
   };
   page.init({

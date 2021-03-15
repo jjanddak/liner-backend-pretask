@@ -43,13 +43,35 @@ module.exports = {
       text: body.text
     }).catch(err => console.log(err))
 
-    res.send({
+    res.status(200).send({
       "highlightId": highlightInfo.id,
       "userId": userInfo.id,
       "pageId": pageInfo.id,
       "colorHex": colorArr[colorArr.indexOf(body.colorHex)],
       "text": body.text
     });
+  },
+
+  update: async (req, res) => {
+    const body = req.body;
+
+    const userInfo = await user.update({
+      theme:body.themeId
+    },
+    {
+      where : {
+        id:body.userId
+      }
+    }).catch(err=>{
+      console.log(err);
+      return res.status(400).send("ERROR OCCURRED");
+    });
+
+    if(userInfo[0]===1){
+      res.status(200).send("200 OK");
+    }else{
+      res.status(400).send("theme update failed");
+    }
   },
 
 
