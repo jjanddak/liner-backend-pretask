@@ -6,6 +6,6 @@ const linerController = require("../controllers/linerController");
 router.post("/create", linerController.create);
 
 //UPDATE /liner/update
-router.put("/update", linerController.update);
+
 
 module.exports = router;
