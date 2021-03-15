@@ -45,7 +45,7 @@ module.exports = {
       user_id: body.userId,
       page_id: pageInfo.id,
       theme_id: userInfo.theme, //user테이블의 theme 번호
-      color_id: ((colorArr.indexOf(body.colorHex)) + 1) % 3, //몇번색을 썼는지
+      color_id: (colorArr.indexOf(body.colorHex)) % 3, //몇번 인덱스의 색을 썼는지
       text: body.text
     }).catch(err => {
       console.log(err);
@@ -64,14 +64,12 @@ module.exports = {
   update: async (req, res) => {
     const body = req.body;
 
-    //유효성 검사
-    if(!body.text || !body.colorHex){
+    //text가 있고, colorHex값이 존재하는 색중에 하나인지 유효성 검사
+    if(!body.text && !colorArr.includes(body.colorHex)){
       return res.status(400).send("body content is invalid");
-    }else if(!colorArr.includes(body.colorHex)){
-      return res.status(400).send("colorHex is invalid")
     }
 
-    //highlightId 유효성 검사
+    //request body의 highlightId, userId 유효성 검사
     const highlightInfo = await highlight.findOne({
       where : {
         id:body.highlightId,
@@ -81,6 +79,10 @@ module.exports = {
         {
           model:page,
           attributes:["id"]
+        }, 
+        {
+          model: user,
+          attributes:["theme"]
         }
       ]
     }).catch(err=>{
@@ -88,15 +90,22 @@ module.exports = {
       return res.status(400).send("highlight doesn't exist")
     })
 
+    //변경하려는 색이 유저가 사용중인 테마의 색 3가지중에 하나가 아니면 변경하지 않고 이전의 색을 사용
+    const maxIndex = ((highlightInfo.user.theme-1)*3)+2;
+    const minIndex = ((highlightInfo.user.theme-1)*3);
+    const colorIndex = colorArr.indexOf(body.colorHex); 
+    
+    //request body의 colorHex값이 유효하지 않을 때 이전의 colorHex값을 사용
+    const oldColorHex = colorArr[((highlightInfo.user.theme-1)*3) + highlightInfo.color_id];
+
     const isUpdated = await highlight.update({
-      colorHex : body.colorHex ? body.colorHex : highlightInfo.colorHex,
+      color_id : colorIndex >= minIndex && colorIndex <= maxIndex ? colorIndex %3 : highlightInfo.color_id,
       text: body.text ? body.text : highlightInfo.text
     },
     {
       where: {
         id:body.highlightId,
         user_id:body.userId
-        //다른 유저의 하이라이트를 수정하지 못하도록 유저아이디도 일치하는지 검사
       }
     }).catch(err=>{
       console.log(err);
@@ -108,7 +117,7 @@ module.exports = {
         "highlightId": body.highlightId,  
         "userId": body.userId,
         "pageId": highlightInfo.page.id,
-        "colorHex" : body.colorHex ? body.colorHex : highlightInfo.colorHex,
+        "colorHex" : colorIndex >= minIndex && colorIndex <= maxIndex ? body.colorHex : oldColorHex,
         "text": body.text ? body.text : highlightInfo.text
       })
     }else{
