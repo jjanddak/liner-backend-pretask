@@ -13,14 +13,17 @@ module.exports = {
 
     //필요한 값이 모두 있는지, colorHex가 테마에 존재하는 값인지 확인
     if (!body.userId || !body.pageUrl || !body.colorHex || !body.text || !colorArr.includes(body.colorHex)) {
-      return res.send({ message: "Error : body content is invalid" });
+      return res.status(400).send({ message: "body content is invalid" });
     };
 
     const userInfo = await user.findOne({
       where: {
         id: body.userId
       }
-    }).catch(err => console.log(err))
+    }).catch(err => {
+      console.log(err);
+      return res.status(400).send("user doesn't exist")
+    })
 
     const pageInfo = await page.findOrCreate({
       where: {
@@ -33,7 +36,10 @@ module.exports = {
       .then((page, created) => {
         return page[0];
       })
-      .catch(err => console.log(err))
+      .catch(err => {
+        console.log(err);
+        return res.status(400).send("highlight create failed")
+      })
 
     const highlightInfo = await highlight.create({
       user_id: body.userId,
@@ -41,7 +47,10 @@ module.exports = {
       theme_id: userInfo.theme, //user테이블의 theme 번호
       color_id: ((colorArr.indexOf(body.colorHex)) + 1) % 3, //몇번색을 썼는지
       text: body.text
-    }).catch(err => console.log(err))
+    }).catch(err => {
+      console.log(err);
+      return res.status(400).send("highlight create failed")
+    })
 
     res.status(200).send({
       "highlightId": highlightInfo.id,
@@ -53,6 +62,59 @@ module.exports = {
   },
 
   update: async (req, res) => {
+    const body = req.body;
 
-  }
+    //유효성 검사
+    if(!body.text || !body.colorHex){
+      return res.status(400).send("body content is invalid");
+    }else if(!colorArr.includes(body.colorHex)){
+      return res.status(400).send("colorHex is invalid")
+    }
+
+    //highlightId 유효성 검사
+    const highlightInfo = await highlight.findOne({
+      where : {
+        id:body.highlightId,
+        user_id: body.userId
+      },
+      include:[
+        {
+          model:page,
+          attributes:["id"]
+        }
+      ]
+    }).catch(err=>{
+      console.log(err);
+      return res.status(400).send("highlight doesn't exist")
+    })
+
+    const isUpdated = await highlight.update({
+      colorHex : body.colorHex ? body.colorHex : highlightInfo.colorHex,
+      text: body.text ? body.text : highlightInfo.text
+    },
+    {
+      where: {
+        id:body.highlightId,
+        user_id:body.userId
+        //다른 유저의 하이라이트를 수정하지 못하도록 유저아이디도 일치하는지 검사
+      }
+    }).catch(err=>{
+      console.log(err);
+      return res.status(400).send("update failed");
+    });
+
+    if(isUpdated[0]===1){
+      res.status(200).send({
+        "highlightId": body.highlightId,  
+        "userId": body.userId,
+        "pageId": highlightInfo.page.id,
+        "colorHex" : body.colorHex ? body.colorHex : highlightInfo.colorHex,
+        "text": body.text ? body.text : highlightInfo.text
+      })
+    }else{
+      res.status(400).send("highlight didn't updated");
+    }
+  },
+
+
 }

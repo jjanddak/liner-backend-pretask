@@ -18,7 +18,6 @@ module.exports = (sequelize, DataTypes) => {
   highlight.init({
     user_id: DataTypes.INTEGER,
     page_id: DataTypes.INTEGER,
-    theme_id: DataTypes.INTEGER,
     color_id: DataTypes.INTEGER,
     text: DataTypes.TEXT
   }, {
