@@ -11,4 +11,7 @@ router.put("/update", linerController.update);
 //GET /liner/getHighlight
 router.get("/getHighlight", linerController.getHighlight);
 
+//GET /liner/getAllHighlights
+router.get("/getAllHighlights", linerController.getAllHighlights);
+
 module.exports = router;

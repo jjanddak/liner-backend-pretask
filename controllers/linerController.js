@@ -33,13 +33,13 @@ module.exports = {
         page_info: "page info, html" //일련의 과정을 통해서 페이지의 정보입력(구현생략 했습니다)
       }
     })
-      .then((page, created) => {
-        return page[0];
-      })
-      .catch(err => {
-        console.log(err);
-        return res.status(400).send("highlight create failed")
-      })
+    .then((page, created) => {
+      return page[0];
+    })
+    .catch(err => {
+      console.log(err);
+      return res.status(400).send("highlight create failed")
+    })
 
     const highlightInfo = await highlight.create({
       user_id: body.userId,
@@ -182,8 +182,6 @@ module.exports = {
       });
     }//if end
 
-    // res.send(highlightInfo);
-
     highlightInfo = highlightInfo.map(ele => {
       return {
         highlightId: ele.id,
@@ -197,5 +195,85 @@ module.exports = {
     res.status(200).send(highlightInfo);
   },
 
+  getAllHighlights: async (req, res) => {
+    const body = req.body; 
 
+    if(!body.userId){
+      return res.status(400).send("body content is invalid");
+    }
+  
+    let allHighlights = await highlight.findAll({
+      where: {
+        user_id: body.userId
+      },
+      order: [["page_id", "ASC"], ["updatedAt", "DESC"]],
+      include:[
+        {
+          model: page,
+          attributes: ["id", "url"]
+        },
+        {
+          model: user,
+          attributes: ["theme"] //colorHex값 구하기위해 테마값 가져옴
+        }
+      ]
+    }).catch(err=>{
+      console.log(err);
+      return res.status(400).send("get All highlights failed");
+    });
+
+    //출력예시처럼 JSON을 편집
+    const createResultJSON = (highlights) => {
+      let result = [];
+      let index = 0;
+
+      result.push({
+        pageId: highlights[0].page.id,
+        pageUrl: highlights[0].page.url,
+        highlights: [
+          { 
+            highlightId: highlights[0].id,
+            userId: highlights[0].user_id,
+            pageId: highlights[0].page_id,
+            colorHex: colorArr[(highlights[0].user.theme-1)*3+highlights[0].color_id],
+            text: highlights[0].text
+          }
+        ]
+      });
+
+      for(let i=1; i<highlights.length; i++){
+        //같은 페이지의 하이라이트일 때
+        if(highlights[i].page.id === highlights[i-1].page.id){
+          result[index].highlights.push({
+            highlightId: highlights[i].id,
+            userId: highlights[i].user_id,
+            pageId: highlights[i].page_id,
+            colorHex: colorArr[(highlights[i].user.theme-1)*3+highlights[i].color_id],
+            text: highlights[i].text
+          })
+        }else{ //다른 페이지의 하이라이트일 때
+          index++;
+          result.push({
+            pageId: highlights[i].page.id,
+            pageUrl: highlights[i].page.url,
+            highlights: [
+              { 
+                highlightId: highlights[i].id,
+                userId: highlights[i].user_id,
+                pageId: highlights[i].page_id,
+                colorHex: colorArr[(highlights[i].user.theme-1)*3+highlights[i].color_id],
+                text: highlights[i].text
+              }
+            ]
+          });
+        }
+      }
+      return result;
+    }
+
+    allHighlights = createResultJSON(allHighlights);
+
+    res.status(200).send(allHighlights);
+    
+  }
 }
