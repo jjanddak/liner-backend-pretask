@@ -125,5 +125,77 @@ module.exports = {
     }
   },
 
+  getHighlight: async (req, res) => {
+    const body = req.body;
+
+    //두값 모두 없을 때
+    if(!body.pageId && !body.pageUrl || !body.userId){
+      return res.status(400).send("body content is invalid");
+    }
+
+    let highlightInfo = {};
+    //pageId로 가져오기
+    if(body.pageId){
+      highlightInfo = await highlight.findAll({
+        where: {
+          user_id:body.userId,
+          page_id:body.pageId
+        },
+        // limit: 10,
+        order: [["updatedAt", "DESC"]],
+        include:[
+          {
+            model: user,
+            attributes: ["theme"] //colorHex값 구하기위해 테마값 가져옴
+          }
+        ]
+      }).catch(err=>{
+        console.log(err);
+        return res.status(400).send("get highlight failed");
+      });
+    }else{ //pageUrl로 가져오기
+      const pageId = await page.findOne({
+        where: {
+          url: body.pageUrl
+        }
+      }).catch(err=>{
+        console.log(err);
+        return res.status(400).send("pageId doesn't exist");
+      });
+
+      highlightInfo = await highlight.findAll({
+        where: {
+          user_id:body.userId,
+          page_id:pageId.id
+        },
+        // limit: 10,
+        order: [["updatedAt", "DESC"]],
+        include:[
+          {
+            model: user,
+            attributes: ["theme"] //colorHex값 구하기위해 테마값 가져옴
+          }
+        ]
+      }).catch(err=>{
+        console.log(err);
+        return res.status(400).send("get highlight failed");
+      });
+    }//if end
+
+    // res.send(highlightInfo);
+
+    highlightInfo = highlightInfo.map(ele => {
+      return {
+        highlightId: ele.id,
+        userId: ele.user_id,
+        pageId: ele.page_id,
+        colorHex: colorArr[(ele.user.theme-1)*3+ele.color_id],
+        text: ele.text
+      }
+    })
+
+    res.status(200).send(highlightInfo);
+  },
+
 
 }
