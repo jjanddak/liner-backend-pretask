@@ -1,6 +1,8 @@
 const Sequelize = require("sequelize");
 const { user, highlight, page } = require("../models");
 const Op = Sequelize.Op;
+const verifyAccessToken = require("../verifyAccessToken");
+const verifyRefreshToken = require("../verifyRefreshToken");
 
 //colorHex를 보고 테마의 몇번 색상을 사용중인지 확인하고, 테마가 변경되어도 같은 순서의 색을 사용하도록 구현했습니다.
 //colorHex 종류가 많아진다면 DB에 새로운 테이블이 필요하다고 생각했습니다.
@@ -10,6 +12,33 @@ const colorArr = ["#ffff8d", "#a5f2e9", "#ffd5c8", "#f6f0aa", "#d3edd1", "#f9d6c
 module.exports = {
   create: async (req, res) => {
     const body = req.body;
+
+    //토큰인증
+    const authorization = req.headers["authorization"];
+    let accessToken=authorization.split(" ")[1]; //0번인덱스는 'Bearer' 1번이 토큰정보
+
+    const isAccessValid = verifyAccessToken(accessToken);
+
+    //AccessToken 유효하지 않을 때
+    if(!isAccessValid){
+      //RefreshToken 확인
+      const refreshToken = req.cookies.refreshToken;
+      if(!refreshToken){
+        return res.status(400).json("refresh token not provided");
+      }
+      const isRefeshValid = verifyRefreshToken(refreshToken);
+
+      //RefreshToken 또한 유효하지 않을 때
+      if(!isRefeshValid){
+        return res.status(400).send("invalid refreshToken");
+      }else{
+        //AccessToken 재발급
+        accessToken=jwt.sign({
+          id:refreshToken.id,
+          username:refreshToken.username,
+        },ACCESS_SECRET);
+      }
+    }
 
     //필요한 값이 모두 있는지, colorHex가 테마에 존재하는 값인지 확인
     if (!body.userId || !body.pageUrl || !body.colorHex || !body.text || !colorArr.includes(body.colorHex)) {
@@ -57,12 +86,40 @@ module.exports = {
       "userId": userInfo.id,
       "pageId": pageInfo.id,
       "colorHex": colorArr[colorArr.indexOf(body.colorHex)],
-      "text": body.text
+      "text": body.text,
+      "accessToken": isAccessValid ? accessToken : null
     });
   },
 
   update: async (req, res) => {
     const body = req.body;
+    
+    //토큰인증
+    const authorization = req.headers["authorization"];
+    let accessToken=authorization.split(" ")[1]; //0번인덱스는 'Bearer' 1번이 토큰정보
+
+    const isAccessValid = verifyAccessToken(accessToken);
+
+    //AccessToken 유효하지 않을 때
+    if(!isAccessValid){
+      //RefreshToken 확인
+      const refreshToken = req.cookies.refreshToken;
+      if(!refreshToken){
+        return res.status(400).json("refresh token not provided");
+      }
+      const isRefeshValid = verifyRefreshToken(refreshToken);
+
+      //RefreshToken 또한 유효하지 않을 때
+      if(!isRefeshValid){
+        return res.status(400).send("invalid refreshToken");
+      }else{
+        //AccessToken 재발급
+        accessToken=jwt.sign({
+          id:refreshToken.id,
+          username:refreshToken.username,
+        },ACCESS_SECRET);
+      }
+    }
 
     //text가 있고, colorHex값이 존재하는 색중에 하나인지 유효성 검사
     if(!body.text && !colorArr.includes(body.colorHex)){
@@ -118,7 +175,8 @@ module.exports = {
         "userId": body.userId,
         "pageId": highlightInfo.page.id,
         "colorHex" : colorIndex >= minIndex && colorIndex <= maxIndex ? body.colorHex : oldColorHex,
-        "text": body.text ? body.text : highlightInfo.text
+        "text": body.text ? body.text : highlightInfo.text,
+        "accessToken": isAccessValid ? accessToken : null
       })
     }else{
       res.status(400).send("highlight didn't updated");
@@ -127,6 +185,33 @@ module.exports = {
 
   getHighlight: async (req, res) => {
     const body = req.body;
+
+    //토큰인증
+    const authorization = req.headers["authorization"];
+    let accessToken=authorization.split(" ")[1]; //0번인덱스는 'Bearer' 1번이 토큰정보
+
+    const isAccessValid = verifyAccessToken(accessToken);
+
+    //AccessToken 유효하지 않을 때
+    if(!isAccessValid){
+      //RefreshToken 확인
+      const refreshToken = req.cookies.refreshToken;
+      if(!refreshToken){
+        return res.status(400).json("refresh token not provided");
+      }
+      const isRefeshValid = verifyRefreshToken(refreshToken);
+
+      //RefreshToken 또한 유효하지 않을 때
+      if(!isRefeshValid){
+        return res.status(400).send("invalid refreshToken");
+      }else{
+        //AccessToken 재발급
+        accessToken=jwt.sign({
+          id:refreshToken.id,
+          username:refreshToken.username,
+        },ACCESS_SECRET);
+      }
+    }
 
     //두값 모두 없을 때
     if(!body.pageId && !body.pageUrl || !body.userId){
@@ -192,11 +277,38 @@ module.exports = {
       }
     })
 
-    res.status(200).send(highlightInfo);
+    res.status(200).send({highlightInfo:highlightInfo, accessToken:accessToken});
   },
 
   getAllHighlights: async (req, res) => {
     const body = req.body; 
+
+    //토큰인증
+    const authorization = req.headers["authorization"];
+    let accessToken=authorization.split(" ")[1]; //0번인덱스는 'Bearer' 1번이 토큰정보
+
+    const isAccessValid = verifyAccessToken(accessToken);
+
+    //AccessToken 유효하지 않을 때
+    if(!isAccessValid){
+      //RefreshToken 확인
+      const refreshToken = req.cookies.refreshToken;
+      if(!refreshToken){
+        return res.status(400).json("refresh token not provided");
+      }
+      const isRefeshValid = verifyRefreshToken(refreshToken);
+
+      //RefreshToken 또한 유효하지 않을 때
+      if(!isRefeshValid){
+        return res.status(400).send("invalid refreshToken");
+      }else{
+        //AccessToken 재발급
+        accessToken=jwt.sign({
+          id:refreshToken.id,
+          username:refreshToken.username,
+        },ACCESS_SECRET);
+      }
+    }
 
     if(!body.userId){
       return res.status(400).send("body content is invalid");
@@ -273,13 +385,40 @@ module.exports = {
 
     allHighlights = createResultJSON(allHighlights);
 
-    res.status(200).send(allHighlights);
+    res.status(200).send({allHighlights:allHighlights, accessToken:accessToken});
     
   },
 
   deleteHighlight: async (req, res) => {
     const body = req.body;
+                 
+    //토큰인증
+    const authorization = req.headers["authorization"];
+    let accessToken=authorization.split(" ")[1]; //0번인덱스는 'Bearer' 1번이 토큰정보
 
+    const isAccessValid = verifyAccessToken(accessToken);
+
+    //AccessToken 유효하지 않을 때
+    if(!isAccessValid){
+      //RefreshToken 확인
+      const refreshToken = req.cookies.refreshToken;
+      if(!refreshToken){
+        return res.status(400).json("refresh token not provided");
+      }
+      const isRefeshValid = verifyRefreshToken(refreshToken);
+
+      //RefreshToken 또한 유효하지 않을 때
+      if(!isRefeshValid){
+        return res.status(400).send("invalid refreshToken");
+      }else{
+        //AccessToken 재발급
+        accessToken=jwt.sign({
+          id:refreshToken.id,
+          username:refreshToken.username,
+        },ACCESS_SECRET);
+      }
+    }
+                            
     if(!body.userId || !body.highlightId){
       return res.status(400).send("body content is invalid");
     }
@@ -295,7 +434,7 @@ module.exports = {
     });
 
     if(isDeleted){
-      res.status(200).send("200 OK");
+      res.status(200).send({message:"200 OK", accessToken:accessToken});
     }else{
       res.status(400).send("highlight didn't deleted");
     }
