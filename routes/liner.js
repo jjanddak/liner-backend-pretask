@@ -14,4 +14,7 @@ router.get("/getHighlight", linerController.getHighlight);
 //GET /liner/getAllHighlights
 router.get("/getAllHighlights", linerController.getAllHighlights);
 
+//DELETE /liner/deleteHighlight
+router.delete("/deleteHighlight", linerController.deleteHighlight);
+
 module.exports = router;

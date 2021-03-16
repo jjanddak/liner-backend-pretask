@@ -275,5 +275,29 @@ module.exports = {
 
     res.status(200).send(allHighlights);
     
+  },
+
+  deleteHighlight: async (req, res) => {
+    const body = req.body;
+
+    if(!body.userId || !body.highlightId){
+      return res.status(400).send("body content is invalid");
+    }
+    
+    const isDeleted = await highlight.destroy({
+      where: {
+        user_id: body.userId,
+        id: body.highlightId
+      }
+    }).catch(err=>{
+      console.log(err);
+      return res.status(400).send("delete highlight failed");
+    });
+
+    if(isDeleted){
+      res.status(200).send("200 OK");
+    }else{
+      res.status(400).send("highlight didn't deleted");
+    }
   }
 }
